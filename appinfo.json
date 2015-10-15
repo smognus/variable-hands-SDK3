@@ -1,0 +1,34 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "miketcoulson@gmail.com",
+    "longName": "Variable Hands",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/menu_icon",
+                "name": "menu_icon",
+                "type": "png"
+            },
+            {
+                "file": "images/clockface.png",
+                "menuIcon": true,
+                "name": "clockface_bitmap",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "Variable Hands",
+    "targetPlatforms": [
+        "basalt"
+    ],
+    "uuid": "684c07af-b328-4389-82c1-005824db072e",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": true
+    }
+}
