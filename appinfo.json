@@ -3,20 +3,20 @@
     "capabilities": [
         ""
     ],
-    "companyName": "miketcoulson@gmail.com",
+    "companyName": "Smognus",
     "longName": "Variable Hands",
     "projectType": "native",
     "resources": {
         "media": [
             {
-                "file": "images/menu_icon",
-                "name": "menu_icon",
+                "file": "images/clockface.png",
+                "name": "clockface_bitmap",
                 "type": "png"
             },
             {
-                "file": "images/clockface.png",
+                "file": "images/menu_icon",
                 "menuIcon": true,
-                "name": "clockface_bitmap",
+                "name": "menu_icon",
                 "type": "png"
             }
         ]
@@ -26,7 +26,7 @@
     "targetPlatforms": [
         "basalt"
     ],
-    "uuid": "684c07af-b328-4389-82c1-005824db072e",
+    "uuid": "1d9ca158-90c6-4aff-baab-9b45b1d0067a",
     "versionLabel": "1.0",
     "watchapp": {
         "watchface": true
