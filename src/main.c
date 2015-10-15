@@ -22,10 +22,6 @@ static void deinit() {
   layer_destroy(hour_hand_layer);
   bitmap_layer_destroy(background_layer);
   window_destroy(root_window);
-  gpath_destroy(second_hand_path);
-  gpath_destroy(minute_hand_path);
-  gpath_destroy(hour_hand_path);
-  gpath_destroy(hand_highlight_path);
 }
 static void time_change_handler(struct tm *current_time, TimeUnits units_changed) {
   layer_mark_dirty(root_window_layer);
@@ -65,7 +61,6 @@ static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
   }
   
   // Create and draw the path with the correct length as modified by the calculations above.
-  gpath_destroy(second_hand_path);
   second_hand_path = gpath_create(&second_hand_path_points);
   gpath_move_to(second_hand_path, center);
   gpath_rotate_to(second_hand_path, TRIG_MAX_ANGLE / 360 * second_angle);
@@ -74,13 +69,14 @@ static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_filled(ctx, second_hand_path);
   gpath_draw_outline(ctx, second_hand_path);
-  gpath_destroy(hand_highlight_path);
   hand_highlight_path = gpath_create(&hand_highlight_path_points);
   gpath_move_to(hand_highlight_path, center);
   gpath_rotate_to(hand_highlight_path, TRIG_MAX_ANGLE / 360 * second_angle);
   graphics_context_set_stroke_color(ctx, GColorRichBrilliantLavender);
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_outline(ctx, hand_highlight_path);  
+  gpath_destroy(second_hand_path);
+  gpath_destroy(hand_highlight_path);
 }
 static void minute_hand_layer_draw(Layer *layer, GContext *ctx) {
   // Get the current time.
@@ -130,6 +126,8 @@ static void minute_hand_layer_draw(Layer *layer, GContext *ctx) {
   graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_outline(ctx, hand_highlight_path);  
+  gpath_destroy(minute_hand_path);
+  gpath_destroy(hand_highlight_path);
 }
 static void hour_hand_layer_draw(Layer *layer, GContext *ctx) {
   // Get the current time.
@@ -187,6 +185,8 @@ static void hour_hand_layer_draw(Layer *layer, GContext *ctx) {
   graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_outline(ctx, hand_highlight_path);  
+  gpath_destroy(hour_hand_path);
+  gpath_destroy(hand_highlight_path);
 }
 static void background_layer_draw (Layer* layer, GContext* ctx) {
   graphics_draw_bitmap_in_rect(ctx, clockface_bitmap, layer_get_frame(layer));

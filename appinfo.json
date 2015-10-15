@@ -1,7 +1,9 @@
 {
-    "appKeys": {},
+    "appKeys": {
+        "second_hand_enable": 0
+    },
     "capabilities": [
-        ""
+        "configurable"
     ],
     "companyName": "Smognus",
     "longName": "Variable Hands",
@@ -26,7 +28,7 @@
     "targetPlatforms": [
         "basalt"
     ],
-    "uuid": "1d9ca158-90c6-4aff-baab-9b45b1d0067a",
+    "uuid": "e4383fb3-620a-4bca-8e40-eef84789ce1c",
     "versionLabel": "1.0",
     "watchapp": {
         "watchface": true
