@@ -1,7 +1,7 @@
 {
     "appKeys": {
+        "batterySetting": 2,
         "daySetting": 1,
-        "invertSetting": 2,
         "tickSetting": 0
     },
     "capabilities": [

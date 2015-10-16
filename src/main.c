@@ -3,14 +3,16 @@
 
 #define tickSetting 0
 #define daySetting 1
-#define invertSetting 2
-#define day_frame GRect(90,73,20,25)
+#define batterySetting 2
+#define day_frame GRect(90,73,22,25)
+#define battery_rect GRect(48,38,48,3)
 
 static Layer *root_window_layer;  
 static Layer *second_hand_layer;
 static Layer *minute_hand_layer;
 static Layer *hour_hand_layer;
 static Layer *day_layer;
+static Layer *battery_status_layer;
 static BitmapLayer *background_layer;
 static TextLayer *day_number_layer;
 static Window *root_window;
@@ -93,6 +95,8 @@ static void minute_hand_layer_draw(Layer *layer, GContext *ctx) {
   // Get the current time.
   time_t temp = time(NULL); 
   struct tm *current_time = localtime(&temp);
+  
+  //current_time->tm_min = 15;
   
   // `minute_angle' is the simple angle used to rotate the path
   // `trig_minute_angle' is the value used to calculate the length that the path needs to be.
@@ -211,15 +215,36 @@ static void day_layer_draw (Layer* layer, GContext* ctx) {
     
     graphics_context_set_fill_color(ctx, GColorWhite);
     graphics_context_set_stroke_color(ctx, GColorDarkGray);
-    graphics_context_set_stroke_width(ctx, 6);
-   // graphics_fill_rect(ctx, day_frame, 3, GCornersAll);
+    graphics_context_set_stroke_width(ctx, 3);
+    graphics_fill_rect(ctx, day_frame, 5, GCornersAll);
     graphics_draw_rect(ctx, day_frame);
     
-    layer_add_child(layer, text_layer_get_layer(day_number_layer));
-      text_layer_set_font(day_number_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+    text_layer_set_font(day_number_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+    text_layer_set_background_color(day_number_layer, GColorClear);
     text_layer_set_text_alignment(day_number_layer, GTextAlignmentCenter);
     text_layer_set_text(day_number_layer, day);
   }
+}
+static void battery_status_draw (Layer* layer, GContext* ctx) {
+  int battery_bar_origin_x = 48;
+  int battery_bar_destination_x = 96;
+  int battery_bar_origin_y = 42;  
+  BatteryChargeState charge_state = battery_state_service_peek(); 
+  
+  int current_charge = charge_state.charge_percent;
+  int current_depletion = 100 - current_charge;
+  // Shorten the green portion of the bar 5 pixels for every 10% reduction in battery state;
+  int charge_destination_x = battery_bar_destination_x - (5 * (current_depletion / 10));
+  
+  graphics_context_set_stroke_width(ctx, 6);
+  graphics_context_set_stroke_color(ctx, GColorLightGray); 
+  graphics_draw_line(ctx, GPoint(battery_bar_origin_x, battery_bar_origin_y), GPoint(battery_bar_destination_x, battery_bar_origin_y));
+  
+  graphics_context_set_stroke_width(ctx, 3);
+  graphics_context_set_stroke_color(ctx, GColorDarkGray); 
+  graphics_draw_line(ctx, GPoint(battery_bar_origin_x, battery_bar_origin_y), GPoint(battery_bar_destination_x, battery_bar_origin_y));
+  graphics_context_set_stroke_color(ctx, GColorGreen); 
+  graphics_draw_line(ctx, GPoint(battery_bar_origin_x, battery_bar_origin_y), GPoint(charge_destination_x, battery_bar_origin_y));
 }
 
 static void background_layer_draw (Layer* layer, GContext* ctx) {
@@ -238,26 +263,34 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
       tick_timer_service_unsubscribe();
       tick_timer_service_subscribe(MINUTE_UNIT, time_change_handler);
   }
-  
   Tuple *day_setting_tuple = dict_find(iterator, daySetting);
   if(day_setting_tuple && day_setting_tuple->value->int32 > 0) {
     persist_write_bool(daySetting, true);
     layer_set_hidden(day_layer, false);
+    layer_set_hidden(text_layer_get_layer(day_number_layer), false);
   } else {
     persist_write_bool(daySetting, false);
     layer_set_hidden(day_layer, true);
+    layer_set_hidden(text_layer_get_layer(day_number_layer), true);
   }
+  Tuple *battery_setting_tuple = dict_find(iterator, daySetting);
+  if(battery_setting_tuple && battery_setting_tuple->value->int32 > 0) {
+    persist_write_bool(batterySetting, true);
+    layer_set_hidden(battery_status_layer, false);
+  } else {
+    persist_write_bool(batterySetting, false);
+    layer_set_hidden(battery_status_layer, true);
+  }
+  
   // Redraw the screen in case there was a change.
   layer_mark_dirty(root_window_layer);
 }
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
 }
-
 static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
 }
-
 static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
 }
@@ -284,6 +317,8 @@ static void init() {
   day_layer = layer_create(bounds);
   layer_set_update_proc(day_layer, day_layer_draw);
   
+  battery_status_layer = layer_create(bounds);
+  layer_set_update_proc(battery_status_layer, battery_status_draw);
   day_number_layer = text_layer_create(day_frame);
   
   clockface_bitmap = gbitmap_create_with_resource(RESOURCE_ID_clockface_bitmap);
@@ -292,17 +327,26 @@ static void init() {
   layer_set_update_proc(bitmap_layer_get_layer(background_layer), background_layer_draw);
     
   layer_add_child(root_window_layer, bitmap_layer_get_layer(background_layer));
-  layer_add_child(root_window_layer, day_layer);
+  if (persist_read_bool(batterySetting)) {
+    layer_set_hidden(battery_status_layer, false);
+  } else {
+    layer_set_hidden(battery_status_layer, true);
+  }
+  layer_add_child(root_window_layer, battery_status_layer);
+  layer_add_child(bitmap_layer_get_layer(background_layer), day_layer);
   if (persist_read_bool(daySetting)) {
     layer_set_hidden(day_layer, false);
+    layer_set_hidden(text_layer_get_layer(day_number_layer), false);
   } else {
     layer_set_hidden(day_layer, true);
+    layer_set_hidden(text_layer_get_layer(day_number_layer), true);
   }
-  layer_add_child(day_layer, text_layer_get_layer(day_number_layer));
+  
   layer_add_child(root_window_layer, hour_hand_layer);
   layer_add_child(root_window_layer, minute_hand_layer);
+  layer_add_child(day_layer, text_layer_get_layer(day_number_layer));
   layer_add_child(root_window_layer, second_hand_layer);
-
+  
   window_stack_push(root_window, true);
   tick_timer_service_subscribe((persist_read_bool(tickSetting)) ? SECOND_UNIT : MINUTE_UNIT, time_change_handler);
 }

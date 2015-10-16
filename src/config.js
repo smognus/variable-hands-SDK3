@@ -9,9 +9,9 @@ Pebble.addEventListener("ready", function() {
   console.log('Config window returned: ', JSON.stringify(config_data));
   // Prepare AppMessage payload
   var dict = {
-    'tickSetting': config_data['tickSetting'],
-    'daySetting': config_data['daySetting'],
-    'invertSetting': config_data['invertSetting']
+    'tickSetting': config_data.tickSetting,
+    'daySetting': config_data.daySetting,
+    'batterySetting': config_data.batterySetting
   };
 
   // Send settings to Pebble watchapp
