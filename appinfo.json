@@ -1,6 +1,8 @@
 {
     "appKeys": {
-        "second_hand_enable": 0
+        "daySetting": 1,
+        "invertSetting": 2,
+        "tickSetting": 0
     },
     "capabilities": [
         "configurable"

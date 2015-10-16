@@ -1,17 +1,25 @@
 #include <pebble.h>
 #include "hand_paths.h"
-  
+
+#define tickSetting 0
+#define daySetting 1
+#define invertSetting 2
+#define day_frame GRect(97,77,20,18)
+
 static Layer *root_window_layer;  
 static Layer *second_hand_layer;
 static Layer *minute_hand_layer;
 static Layer *hour_hand_layer;
+static Layer *day_layer;
 static BitmapLayer *background_layer;
+static TextLayer *day_number_layer;
 static Window *root_window;
 static GBitmap *clockface_bitmap;
 static GPath *second_hand_path;
 static GPath *minute_hand_path;
 static GPath *hour_hand_path;
 static GPath *hand_highlight_path;
+
 
 int32_t trig_ninety = TRIG_MAX_ANGLE / 4;
 int32_t trig_one_eighty = TRIG_MAX_ANGLE / 2;
@@ -28,6 +36,8 @@ static void time_change_handler(struct tm *current_time, TimeUnits units_changed
 }
 
 static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
+  if (persist_read_bool(tickSetting)) {
+    
   // Get the current time.
   time_t temp = time(NULL); 
   struct tm *current_time = localtime(&temp);
@@ -77,6 +87,7 @@ static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
   gpath_draw_outline(ctx, hand_highlight_path);  
   gpath_destroy(second_hand_path);
   gpath_destroy(hand_highlight_path);
+  }
 }
 static void minute_hand_layer_draw(Layer *layer, GContext *ctx) {
   // Get the current time.
@@ -188,11 +199,74 @@ static void hour_hand_layer_draw(Layer *layer, GContext *ctx) {
   gpath_destroy(hour_hand_path);
   gpath_destroy(hand_highlight_path);
 }
+
+static void day_layer_draw (Layer* layer, GContext* ctx) {
+  if (persist_read_bool(daySetting)) {
+    time_t temp = time(NULL); 
+    struct tm *current_time = localtime(&temp);
+    
+    static char day[] = "--";
+    
+    strftime(day, sizeof(day), "%e", current_time);
+    
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_context_set_stroke_color(ctx, GColorRichBrilliantLavender);
+    graphics_context_set_stroke_width(ctx, 2);
+    graphics_fill_rect(ctx, day_frame, 3, GCornersAll);
+    graphics_draw_rect(ctx, day_frame);
+    
+    layer_add_child(layer, text_layer_get_layer(day_number_layer));
+    text_layer_set_text_alignment(day_number_layer, GTextAlignmentCenter);
+    text_layer_set_text(day_number_layer, day);
+  }
+}
+
 static void background_layer_draw (Layer* layer, GContext* ctx) {
   graphics_draw_bitmap_in_rect(ctx, clockface_bitmap, layer_get_frame(layer));
 }
+static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+   Tuple *tick_setting_tuple = dict_find(iterator, tickSetting);
+    if(tick_setting_tuple && tick_setting_tuple->value->int32 > 0) {
+      APP_LOG(APP_LOG_LEVEL_INFO, "Turning on second hand.");
+      persist_write_bool(tickSetting, true);
+      tick_timer_service_unsubscribe();
+      tick_timer_service_subscribe(SECOND_UNIT, time_change_handler);
+    } else {
+      APP_LOG(APP_LOG_LEVEL_INFO, "Turning off the second hand.");
+      persist_write_bool(tickSetting, false);
+      tick_timer_service_unsubscribe();
+      tick_timer_service_subscribe(MINUTE_UNIT, time_change_handler);
+  }
+  
+  Tuple *day_setting_tuple = dict_find(iterator, daySetting);
+  if(day_setting_tuple && day_setting_tuple->value->int32 > 0) {
+    persist_write_bool(daySetting, true);
+    layer_set_hidden(day_layer, false);
+  } else {
+    persist_write_bool(daySetting, false);
+    layer_set_hidden(day_layer, true);
+  }
+  // Redraw the screen in case there was a change.
+  layer_mark_dirty(root_window_layer);
+}
+static void inbox_dropped_callback(AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+}
 
+static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+}
+
+static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+}
 static void init() {
+  app_message_register_inbox_received(inbox_received_callback);
+  app_message_register_inbox_dropped(inbox_dropped_callback);
+  app_message_register_outbox_failed(outbox_failed_callback);
+  app_message_register_outbox_sent(outbox_sent_callback);
+  app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+  
   root_window = window_create();
   root_window_layer = window_get_root_layer(root_window);
   GRect bounds = layer_get_bounds(root_window_layer);
@@ -206,20 +280,30 @@ static void init() {
   hour_hand_layer = layer_create(bounds);
   layer_set_update_proc(hour_hand_layer, hour_hand_layer_draw);
   
+  day_layer = layer_create(bounds);
+  layer_set_update_proc(day_layer, day_layer_draw);
+  
+  day_number_layer = text_layer_create(day_frame);
+  
   clockface_bitmap = gbitmap_create_with_resource(RESOURCE_ID_clockface_bitmap);
   
   background_layer = bitmap_layer_create(bounds);
   layer_set_update_proc(bitmap_layer_get_layer(background_layer), background_layer_draw);
     
-  // The order here is important for it to look right.
   layer_add_child(root_window_layer, bitmap_layer_get_layer(background_layer));
+  layer_add_child(root_window_layer, day_layer);
+  if (persist_read_bool(daySetting)) {
+    layer_set_hidden(day_layer, false);
+  } else {
+    layer_set_hidden(day_layer, true);
+  }
+  layer_add_child(day_layer, text_layer_get_layer(day_number_layer));
   layer_add_child(root_window_layer, hour_hand_layer);
   layer_add_child(root_window_layer, minute_hand_layer);
   layer_add_child(root_window_layer, second_hand_layer);
 
   window_stack_push(root_window, true);
-  
-  tick_timer_service_subscribe(SECOND_UNIT, time_change_handler);
+  tick_timer_service_subscribe((persist_read_bool(tickSetting)) ? SECOND_UNIT : MINUTE_UNIT, time_change_handler);
 }
 
 int main(void) {  
