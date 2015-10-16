@@ -4,7 +4,7 @@
 #define tickSetting 0
 #define daySetting 1
 #define invertSetting 2
-#define day_frame GRect(97,77,20,18)
+#define day_frame GRect(90,73,20,25)
 
 static Layer *root_window_layer;  
 static Layer *second_hand_layer;
@@ -210,12 +210,13 @@ static void day_layer_draw (Layer* layer, GContext* ctx) {
     strftime(day, sizeof(day), "%e", current_time);
     
     graphics_context_set_fill_color(ctx, GColorWhite);
-    graphics_context_set_stroke_color(ctx, GColorRichBrilliantLavender);
-    graphics_context_set_stroke_width(ctx, 2);
-    graphics_fill_rect(ctx, day_frame, 3, GCornersAll);
+    graphics_context_set_stroke_color(ctx, GColorDarkGray);
+    graphics_context_set_stroke_width(ctx, 6);
+   // graphics_fill_rect(ctx, day_frame, 3, GCornersAll);
     graphics_draw_rect(ctx, day_frame);
     
     layer_add_child(layer, text_layer_get_layer(day_number_layer));
+      text_layer_set_font(day_number_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
     text_layer_set_text_alignment(day_number_layer, GTextAlignmentCenter);
     text_layer_set_text(day_number_layer, day);
   }
