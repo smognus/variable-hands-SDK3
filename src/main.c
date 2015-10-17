@@ -288,7 +288,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     layer_set_hidden(day_layer, true);
     layer_set_hidden(text_layer_get_layer(day_number_layer), true);
   }
-  Tuple *battery_setting_tuple = dict_find(iterator, daySetting);
+  Tuple *battery_setting_tuple = dict_find(iterator, batterySetting);
   if(battery_setting_tuple && battery_setting_tuple->value->int32 > 0) {
     persist_write_bool(batterySetting, true);
     layer_set_hidden(battery_status_layer, false);
@@ -303,9 +303,9 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     persist_write_int(secondStartSetting, second_start);
     int second_end = second_end_tuple->value->int32;
     persist_write_int(secondEndSetting, second_end);
-    layer_mark_dirty(root_window_layer);
   }
   determine_second_hand_draw();
+  layer_mark_dirty(root_window_layer);
 }
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
