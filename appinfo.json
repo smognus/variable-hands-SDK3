@@ -15,14 +15,14 @@
     "resources": {
         "media": [
             {
-                "file": "images/clockface.png",
-                "name": "clockface_bitmap",
+                "file": "images/menu_icon.png",
+                "menuIcon": true,
+                "name": "menu_icon",
                 "type": "png"
             },
             {
-                "file": "images/menu_icon",
-                "menuIcon": true,
-                "name": "menu_icon",
+                "file": "images/clockface.png",
+                "name": "clockface_bitmap",
                 "type": "png"
             }
         ]
