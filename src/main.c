@@ -27,6 +27,7 @@ static GPath *hand_highlight_path;
 
 int32_t trig_ninety = TRIG_MAX_ANGLE / 4;
 int32_t trig_one_eighty = TRIG_MAX_ANGLE / 2;
+int previous_hour;
 
 static void deinit() {
   layer_destroy(second_hand_layer);
@@ -34,6 +35,11 @@ static void deinit() {
   layer_destroy(hour_hand_layer);
   bitmap_layer_destroy(background_layer);
   window_destroy(root_window);
+}
+static struct tm* get_current_time() {
+    time_t temp = time(NULL); 
+    struct tm *current_time = localtime(&temp);
+  return current_time;
 }
 static void set_tick_update_interval(TimeUnits tickunit) {
   tick_timer_service_unsubscribe();
@@ -59,6 +65,12 @@ static bool determine_second_hand_draw() {
 }
 static void time_change_handler(struct tm *current_time, TimeUnits units_changed) {
 //  determine_second_hand_draw();
+  int current_hour = current_time->tm_hour;
+  if (current_hour != previous_hour) {
+    determine_second_hand_draw();  
+    previous_hour = current_hour;
+    APP_LOG(APP_LOG_LEVEL_INFO, "New hour has elapsed.");
+  }
   layer_mark_dirty(root_window_layer);
 }
 
@@ -373,6 +385,8 @@ static void init() {
   
   window_stack_push(root_window, true);
   set_tick_update_interval((determine_second_hand_draw()) ? SECOND_UNIT : MINUTE_UNIT);
+  struct tm *current_time = get_current_time();
+  previous_hour = current_time->tm_hour;
 }
 
 int main(void) {  
