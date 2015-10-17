@@ -1,4 +1,5 @@
 #include <pebble.h>
+#include "main.h"
 #include "hand_paths.h"
 
 #define tickSetting 0
@@ -34,12 +35,13 @@ static void deinit() {
   bitmap_layer_destroy(background_layer);
   window_destroy(root_window);
 }
-static void time_change_handler(struct tm *current_time, TimeUnits units_changed) {
-  layer_mark_dirty(root_window_layer);
-}
 static void set_tick_update_interval(TimeUnits tickunit) {
   tick_timer_service_unsubscribe();
   tick_timer_service_subscribe(tickunit, time_change_handler);
+}
+static void determine_within_second_hand_schedule (struct tm *current_time, TimeUnits units_changed) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "New hour has elapsed.");
+    determine_second_hand_draw();
 }
 static bool determine_second_hand_draw() {
     time_t temp = time(NULL); 
@@ -58,6 +60,10 @@ static bool determine_second_hand_draw() {
       set_tick_update_interval(MINUTE_UNIT);
       return false;
   }
+}
+static void time_change_handler(struct tm *current_time, TimeUnits units_changed) {
+  determine_second_hand_draw();
+  layer_mark_dirty(root_window_layer);
 }
 
 static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
@@ -371,6 +377,7 @@ static void init() {
   
   window_stack_push(root_window, true);
   set_tick_update_interval((determine_second_hand_draw()) ? SECOND_UNIT : MINUTE_UNIT);
+  tick_timer_service_subscribe(HOUR_UNIT, determine_within_second_hand_schedule);
 }
 
 int main(void) {  
