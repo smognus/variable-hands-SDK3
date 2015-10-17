@@ -2,6 +2,8 @@
     "appKeys": {
         "batterySetting": 2,
         "daySetting": 1,
+        "secondEndSetting": 4,
+        "secondStartSetting": 3,
         "tickSetting": 0
     },
     "capabilities": [

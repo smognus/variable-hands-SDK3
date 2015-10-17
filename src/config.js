@@ -11,7 +11,9 @@ Pebble.addEventListener("ready", function() {
   var dict = {
     'tickSetting': config_data.tickSetting,
     'daySetting': config_data.daySetting,
-    'batterySetting': config_data.batterySetting
+    'batterySetting': config_data.batterySetting,
+    'secondStartSetting': config_data.secondStartSetting,
+    'secondEndSetting': config_data.secondEndSetting
   };
 
   // Send settings to Pebble watchapp

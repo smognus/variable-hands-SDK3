@@ -4,6 +4,8 @@
 #define tickSetting 0
 #define daySetting 1
 #define batterySetting 2
+#define secondStartSetting 3
+#define secondEndSetting 4
 #define day_frame GRect(90,73,22,25)
 #define battery_rect GRect(48,38,48,3)
 
@@ -22,7 +24,6 @@ static GPath *minute_hand_path;
 static GPath *hour_hand_path;
 static GPath *hand_highlight_path;
 
-
 int32_t trig_ninety = TRIG_MAX_ANGLE / 4;
 int32_t trig_one_eighty = TRIG_MAX_ANGLE / 2;
 
@@ -36,10 +37,30 @@ static void deinit() {
 static void time_change_handler(struct tm *current_time, TimeUnits units_changed) {
   layer_mark_dirty(root_window_layer);
 }
+static void set_tick_update_interval(TimeUnits tickunit) {
+  tick_timer_service_unsubscribe();
+  tick_timer_service_subscribe(tickunit, time_change_handler);
+}
+static bool determine_second_hand_draw() {
+    time_t temp = time(NULL); 
+    struct tm *current_time = localtime(&temp);
+    int current_hour = current_time->tm_hour;
+    int start_hour = persist_read_int(secondStartSetting);
+    int end_hour = persist_read_int(secondEndSetting);
+    if ((current_hour >= start_hour && current_hour <= end_hour) && persist_read_bool(tickSetting))  {
+      APP_LOG(APP_LOG_LEVEL_INFO, "Setting updates to every second.");
+      layer_set_hidden(second_hand_layer, false);
+      set_tick_update_interval(SECOND_UNIT);
+      return true;
+    } else {
+      APP_LOG(APP_LOG_LEVEL_INFO, "Setting updates to every minute.");
+      layer_set_hidden(second_hand_layer, true);
+      set_tick_update_interval(MINUTE_UNIT);
+      return false;
+  }
+}
 
 static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
-  if (persist_read_bool(tickSetting)) {
-    
   // Get the current time.
   time_t temp = time(NULL); 
   struct tm *current_time = localtime(&temp);
@@ -89,8 +110,8 @@ static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
   gpath_draw_outline(ctx, hand_highlight_path);  
   gpath_destroy(second_hand_path);
   gpath_destroy(hand_highlight_path);
-  }
 }
+
 static void minute_hand_layer_draw(Layer *layer, GContext *ctx) {
   // Get the current time.
   time_t temp = time(NULL); 
@@ -253,15 +274,9 @@ static void background_layer_draw (Layer* layer, GContext* ctx) {
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
    Tuple *tick_setting_tuple = dict_find(iterator, tickSetting);
     if(tick_setting_tuple && tick_setting_tuple->value->int32 > 0) {
-      APP_LOG(APP_LOG_LEVEL_INFO, "Turning on second hand.");
       persist_write_bool(tickSetting, true);
-      tick_timer_service_unsubscribe();
-      tick_timer_service_subscribe(SECOND_UNIT, time_change_handler);
     } else {
-      APP_LOG(APP_LOG_LEVEL_INFO, "Turning off the second hand.");
       persist_write_bool(tickSetting, false);
-      tick_timer_service_unsubscribe();
-      tick_timer_service_subscribe(MINUTE_UNIT, time_change_handler);
   }
   Tuple *day_setting_tuple = dict_find(iterator, daySetting);
   if(day_setting_tuple && day_setting_tuple->value->int32 > 0) {
@@ -281,9 +296,16 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     persist_write_bool(batterySetting, false);
     layer_set_hidden(battery_status_layer, true);
   }
-  
-  // Redraw the screen in case there was a change.
-  layer_mark_dirty(root_window_layer);
+  Tuple *second_start_tuple = dict_find(iterator, secondStartSetting);
+  Tuple *second_end_tuple = dict_find(iterator, secondEndSetting);
+  if(second_start_tuple && second_end_tuple) {
+    int second_start = second_start_tuple->value->int32;
+    persist_write_int(secondStartSetting, second_start);
+    int second_end = second_end_tuple->value->int32;
+    persist_write_int(secondEndSetting, second_end);
+    layer_mark_dirty(root_window_layer);
+  }
+  determine_second_hand_draw();
 }
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
@@ -348,7 +370,7 @@ static void init() {
   layer_add_child(root_window_layer, second_hand_layer);
   
   window_stack_push(root_window, true);
-  tick_timer_service_subscribe((persist_read_bool(tickSetting)) ? SECOND_UNIT : MINUTE_UNIT, time_change_handler);
+  set_tick_update_interval((determine_second_hand_draw()) ? SECOND_UNIT : MINUTE_UNIT);
 }
 
 int main(void) {  
