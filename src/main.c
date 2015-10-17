@@ -39,10 +39,6 @@ static void set_tick_update_interval(TimeUnits tickunit) {
   tick_timer_service_unsubscribe();
   tick_timer_service_subscribe(tickunit, time_change_handler);
 }
-static void determine_within_second_hand_schedule (struct tm *current_time, TimeUnits units_changed) {
-    APP_LOG(APP_LOG_LEVEL_INFO, "New hour has elapsed.");
-    determine_second_hand_draw();
-}
 static bool determine_second_hand_draw() {
     time_t temp = time(NULL); 
     struct tm *current_time = localtime(&temp);
@@ -62,7 +58,7 @@ static bool determine_second_hand_draw() {
   }
 }
 static void time_change_handler(struct tm *current_time, TimeUnits units_changed) {
-  determine_second_hand_draw();
+//  determine_second_hand_draw();
   layer_mark_dirty(root_window_layer);
 }
 
@@ -377,7 +373,6 @@ static void init() {
   
   window_stack_push(root_window, true);
   set_tick_update_interval((determine_second_hand_draw()) ? SECOND_UNIT : MINUTE_UNIT);
-  tick_timer_service_subscribe(HOUR_UNIT, determine_within_second_hand_schedule);
 }
 
 int main(void) {  
