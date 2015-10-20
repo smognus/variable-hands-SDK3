@@ -2,9 +2,13 @@
     "appKeys": {
         "batterySetting": 2,
         "daySetting": 1,
+        "digitalSetting": 5,
         "secondEndSetting": 4,
         "secondStartSetting": 3,
-        "tickSetting": 0
+        "tickSetting": 0,
+        "windowBorderColorSetting": 7,
+        "windowColorSetting": 6,
+        "windowTextColorSetting": 8
     },
     "capabilities": [
         "configurable"
@@ -32,8 +36,8 @@
     "targetPlatforms": [
         "basalt"
     ],
-    "uuid": "e4383fb3-620a-4bca-8e40-eef84789ce1c",
-    "versionLabel": "1.2",
+    "uuid": "c090f026-5428-42f6-8ee7-f33ede1ada9e",
+    "versionLabel": "1.3",
     "watchapp": {
         "watchface": true
     }

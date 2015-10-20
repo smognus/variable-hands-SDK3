@@ -7,7 +7,13 @@
 #define batterySetting 2
 #define secondStartSetting 3
 #define secondEndSetting 4
+#define digitalSetting 5
+#define windowColorSetting 6
+#define windowBorderColorSetting 7
+#define windowTextColorSetting 8
+
 #define day_frame GRect(90,73,22,25)
+#define digital_time_frame GRect(48,106,48,24)
 #define battery_rect GRect(48,38,48,3)
 
 static Layer *root_window_layer;  
@@ -16,7 +22,9 @@ static Layer *minute_hand_layer;
 static Layer *hour_hand_layer;
 static Layer *day_layer;
 static Layer *battery_status_layer;
+static Layer *digital_layer;
 static BitmapLayer *background_layer;
+static TextLayer *digital_numbers_layer;
 static TextLayer *day_number_layer;
 static Window *root_window;
 static GBitmap *clockface_bitmap;
@@ -25,9 +33,13 @@ static GPath *minute_hand_path;
 static GPath *hour_hand_path;
 static GPath *hand_highlight_path;
 
-int32_t trig_ninety = TRIG_MAX_ANGLE / 4;
-int32_t trig_one_eighty = TRIG_MAX_ANGLE / 2;
-int previous_hour;
+const int32_t trig_ninety = TRIG_MAX_ANGLE / 4;
+const int32_t trig_one_eighty = TRIG_MAX_ANGLE / 2;
+static int previous_hour;
+
+static GColor infoWindowColor;
+static GColor infoWindowBorderColor;
+static GColor infoWindowTextColor;
 
 static void deinit() {
   layer_destroy(second_hand_layer);
@@ -65,6 +77,7 @@ static bool determine_second_hand_draw() {
 }
 static void time_change_handler(struct tm *current_time, TimeUnits units_changed) {
 //  determine_second_hand_draw();
+  APP_LOG(APP_LOG_LEVEL_INFO, "Tick handling.");
   int current_hour = current_time->tm_hour;
   if (current_hour != previous_hour) {
     determine_second_hand_draw();  
@@ -73,7 +86,22 @@ static void time_change_handler(struct tm *current_time, TimeUnits units_changed
   }
   layer_mark_dirty(root_window_layer);
 }
-
+static void digital_numbers_layer_draw(Layer *layer, GContext *ctx) {
+    graphics_context_set_fill_color(ctx, infoWindowColor);
+    graphics_context_set_stroke_color(ctx, infoWindowBorderColor);
+    graphics_context_set_stroke_width(ctx, 3);
+    graphics_fill_rect(ctx, digital_time_frame, 5, GCornersAll);
+    graphics_draw_round_rect(ctx, digital_time_frame, 5);
+  
+    static char string_time[16];
+    clock_copy_time_string(string_time, sizeof(string_time));
+    APP_LOG(APP_LOG_LEVEL_INFO, "%s.", string_time);
+    text_layer_set_font(digital_numbers_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+    text_layer_set_background_color(digital_numbers_layer, GColorClear);
+    text_layer_set_text_color(digital_numbers_layer, infoWindowTextColor);
+    text_layer_set_text_alignment(digital_numbers_layer, GTextAlignmentCenter);
+    text_layer_set_text(digital_numbers_layer, string_time);
+}
 static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
   // Get the current time.
   time_t temp = time(NULL); 
@@ -125,7 +153,6 @@ static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
   gpath_destroy(second_hand_path);
   gpath_destroy(hand_highlight_path);
 }
-
 static void minute_hand_layer_draw(Layer *layer, GContext *ctx) {
   // Get the current time.
   time_t temp = time(NULL); 
@@ -238,7 +265,6 @@ static void hour_hand_layer_draw(Layer *layer, GContext *ctx) {
   gpath_destroy(hour_hand_path);
   gpath_destroy(hand_highlight_path);
 }
-
 static void day_layer_draw (Layer* layer, GContext* ctx) {
   if (persist_read_bool(daySetting)) {
     time_t temp = time(NULL); 
@@ -248,14 +274,15 @@ static void day_layer_draw (Layer* layer, GContext* ctx) {
     
     strftime(day, sizeof(day), "%e", current_time);
     
-    graphics_context_set_fill_color(ctx, GColorWhite);
-    graphics_context_set_stroke_color(ctx, GColorDarkGray);
+    graphics_context_set_fill_color(ctx, infoWindowColor);
+    graphics_context_set_stroke_color(ctx, infoWindowBorderColor);
     graphics_context_set_stroke_width(ctx, 3);
     graphics_fill_rect(ctx, day_frame, 5, GCornersAll);
     graphics_draw_rect(ctx, day_frame);
     
     text_layer_set_font(day_number_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
     text_layer_set_background_color(day_number_layer, GColorClear);
+    text_layer_set_text_color(day_number_layer, infoWindowTextColor);
     text_layer_set_text_alignment(day_number_layer, GTextAlignmentCenter);
     text_layer_set_text(day_number_layer, day);
   }
@@ -281,7 +308,6 @@ static void battery_status_draw (Layer* layer, GContext* ctx) {
   graphics_context_set_stroke_color(ctx, GColorGreen); 
   graphics_draw_line(ctx, GPoint(battery_bar_origin_x, battery_bar_origin_y), GPoint(charge_destination_x, battery_bar_origin_y));
 }
-
 static void background_layer_draw (Layer* layer, GContext* ctx) {
   graphics_draw_bitmap_in_rect(ctx, clockface_bitmap, layer_get_frame(layer));
 }
@@ -310,6 +336,14 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     persist_write_bool(batterySetting, false);
     layer_set_hidden(battery_status_layer, true);
   }
+  Tuple *digital_setting_tuple = dict_find(iterator, digitalSetting);
+  if(digital_setting_tuple && digital_setting_tuple->value->int32 > 0) {
+    persist_write_bool(digitalSetting, true);
+    layer_set_hidden(digital_layer, false);
+  } else {
+    persist_write_bool(digitalSetting, false);
+    layer_set_hidden(digital_layer, true);
+  }
   Tuple *second_start_tuple = dict_find(iterator, secondStartSetting);
   Tuple *second_end_tuple = dict_find(iterator, secondEndSetting);
   if(second_start_tuple && second_end_tuple) {
@@ -317,6 +351,21 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     persist_write_int(secondStartSetting, second_start);
     int second_end = second_end_tuple->value->int32;
     persist_write_int(secondEndSetting, second_end);
+  }
+  Tuple *window_color_tuple = dict_find(iterator, windowColorSetting);
+  if (window_color_tuple) {
+    infoWindowColor = GColorFromHEX(window_color_tuple->value->int32);
+    persist_write_int(windowColorSetting, window_color_tuple->value->int32);
+  }
+  Tuple *window_border_color_tuple = dict_find(iterator, windowBorderColorSetting);
+ if (window_border_color_tuple) {
+    infoWindowBorderColor = GColorFromHEX(window_border_color_tuple->value->int32);
+    persist_write_int(windowColorSetting, window_border_color_tuple->value->int32);
+  }
+  Tuple *window_text_color_tuple = dict_find(iterator, windowTextColorSetting);
+  if (window_text_color_tuple) {
+    infoWindowTextColor = GColorFromHEX(window_text_color_tuple->value->int32);
+    persist_write_int(windowColorSetting, window_text_color_tuple->value->int32);
   }
   determine_second_hand_draw();
   layer_mark_dirty(root_window_layer);
@@ -331,6 +380,10 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
 }
 static void init() {
+  infoWindowColor = (persist_exists(windowColorSetting)) ? GColorFromHEX(persist_read_int(windowColorSetting)) : GColorBlack;
+  infoWindowBorderColor = (persist_exists(windowBorderColorSetting)) ? GColorFromHEX(persist_read_int(windowBorderColorSetting)) : GColorDarkGray;
+  infoWindowTextColor = (persist_exists(windowTextColorSetting)) ? GColorFromHEX(persist_read_int(windowTextColorSetting)) : GColorWhite;
+  
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_inbox_dropped(inbox_dropped_callback);
   app_message_register_outbox_failed(outbox_failed_callback);
@@ -353,9 +406,15 @@ static void init() {
   day_layer = layer_create(bounds);
   layer_set_update_proc(day_layer, day_layer_draw);
   
+  day_number_layer = text_layer_create(day_frame);
+  
+  digital_layer = layer_create(bounds);
+  layer_set_update_proc(digital_layer, digital_numbers_layer_draw);
+  
+  digital_numbers_layer = text_layer_create(digital_time_frame);
+  
   battery_status_layer = layer_create(bounds);
   layer_set_update_proc(battery_status_layer, battery_status_draw);
-  day_number_layer = text_layer_create(day_frame);
   
   clockface_bitmap = gbitmap_create_with_resource(RESOURCE_ID_clockface_bitmap);
   
@@ -363,13 +422,20 @@ static void init() {
   layer_set_update_proc(bitmap_layer_get_layer(background_layer), background_layer_draw);
     
   layer_add_child(root_window_layer, bitmap_layer_get_layer(background_layer));
+  
+  layer_add_child(root_window_layer, battery_status_layer);
+  
+  layer_add_child(bitmap_layer_get_layer(background_layer), day_layer);
+  
+  layer_add_child(bitmap_layer_get_layer(background_layer), digital_layer);
+  
+  layer_add_child(hour_hand_layer, text_layer_get_layer(digital_numbers_layer)); 
+  
   if (persist_read_bool(batterySetting)) {
     layer_set_hidden(battery_status_layer, false);
   } else {
     layer_set_hidden(battery_status_layer, true);
   }
-  layer_add_child(root_window_layer, battery_status_layer);
-  layer_add_child(bitmap_layer_get_layer(background_layer), day_layer);
   if (persist_read_bool(daySetting)) {
     layer_set_hidden(day_layer, false);
     layer_set_hidden(text_layer_get_layer(day_number_layer), false);
@@ -377,10 +443,16 @@ static void init() {
     layer_set_hidden(day_layer, true);
     layer_set_hidden(text_layer_get_layer(day_number_layer), true);
   }
+  if (persist_read_bool(digitalSetting)) {
+    layer_set_hidden(digital_layer, false);
+  } else {
+    layer_set_hidden(digital_layer, true);
+  }
   
   layer_add_child(root_window_layer, hour_hand_layer);
   layer_add_child(root_window_layer, minute_hand_layer);
   layer_add_child(day_layer, text_layer_get_layer(day_number_layer));
+  layer_add_child(digital_layer, text_layer_get_layer(digital_numbers_layer));
   layer_add_child(root_window_layer, second_hand_layer);
   
   window_stack_push(root_window, true);
