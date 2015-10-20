@@ -13,7 +13,7 @@
 #define windowTextColorSetting 8
 
 #define day_frame GRect(90,73,22,25)
-#define digital_time_frame GRect(48,106,48,24)
+#define digital_time_frame GRect(40,106,68,24)
 #define battery_rect GRect(48,38,48,3)
 
 static Layer *root_window_layer;  
@@ -47,6 +47,7 @@ static void deinit() {
   layer_destroy(hour_hand_layer);
   bitmap_layer_destroy(background_layer);
   window_destroy(root_window);
+  APP_LOG(APP_LOG_LEVEL_INFO, "deinit()");
 }
 static struct tm* get_current_time() {
     time_t temp = time(NULL); 
@@ -340,9 +341,11 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   if(digital_setting_tuple && digital_setting_tuple->value->int32 > 0) {
     persist_write_bool(digitalSetting, true);
     layer_set_hidden(digital_layer, false);
+    layer_set_hidden(text_layer_get_layer(digital_numbers_layer), false);
   } else {
     persist_write_bool(digitalSetting, false);
     layer_set_hidden(digital_layer, true);
+    layer_set_hidden(text_layer_get_layer(digital_numbers_layer), true);
   }
   Tuple *second_start_tuple = dict_find(iterator, secondStartSetting);
   Tuple *second_end_tuple = dict_find(iterator, secondEndSetting);
@@ -360,12 +363,12 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *window_border_color_tuple = dict_find(iterator, windowBorderColorSetting);
  if (window_border_color_tuple) {
     infoWindowBorderColor = GColorFromHEX(window_border_color_tuple->value->int32);
-    persist_write_int(windowColorSetting, window_border_color_tuple->value->int32);
+    persist_write_int(windowBorderColorSetting, window_border_color_tuple->value->int32);
   }
   Tuple *window_text_color_tuple = dict_find(iterator, windowTextColorSetting);
   if (window_text_color_tuple) {
     infoWindowTextColor = GColorFromHEX(window_text_color_tuple->value->int32);
-    persist_write_int(windowColorSetting, window_text_color_tuple->value->int32);
+    persist_write_int(windowTextColorSetting, window_text_color_tuple->value->int32);
   }
   determine_second_hand_draw();
   layer_mark_dirty(root_window_layer);
@@ -379,11 +382,8 @@ static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResul
 static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
 }
-static void init() {
-  infoWindowColor = (persist_exists(windowColorSetting)) ? GColorFromHEX(persist_read_int(windowColorSetting)) : GColorBlack;
-  infoWindowBorderColor = (persist_exists(windowBorderColorSetting)) ? GColorFromHEX(persist_read_int(windowBorderColorSetting)) : GColorDarkGray;
-  infoWindowTextColor = (persist_exists(windowTextColorSetting)) ? GColorFromHEX(persist_read_int(windowTextColorSetting)) : GColorWhite;
-  
+static void init() {    
+  APP_LOG(APP_LOG_LEVEL_INFO, "init()");
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_inbox_dropped(inbox_dropped_callback);
   app_message_register_outbox_failed(outbox_failed_callback);
@@ -425,11 +425,12 @@ static void init() {
   
   layer_add_child(root_window_layer, battery_status_layer);
   
-  layer_add_child(bitmap_layer_get_layer(background_layer), day_layer);
+  layer_add_child(root_window_layer, day_layer);
   
-  layer_add_child(bitmap_layer_get_layer(background_layer), digital_layer);
+  layer_add_child(root_window_layer, digital_layer);
   
-  layer_add_child(hour_hand_layer, text_layer_get_layer(digital_numbers_layer)); 
+  layer_add_child(day_layer, text_layer_get_layer(day_number_layer));
+  layer_add_child(digital_layer, text_layer_get_layer(digital_numbers_layer));
   
   if (persist_read_bool(batterySetting)) {
     layer_set_hidden(battery_status_layer, false);
@@ -445,19 +446,23 @@ static void init() {
   }
   if (persist_read_bool(digitalSetting)) {
     layer_set_hidden(digital_layer, false);
+    layer_set_hidden(text_layer_get_layer(digital_numbers_layer), false);
   } else {
     layer_set_hidden(digital_layer, true);
+    layer_set_hidden(text_layer_get_layer(digital_numbers_layer), true);
   }
   
   layer_add_child(root_window_layer, hour_hand_layer);
   layer_add_child(root_window_layer, minute_hand_layer);
-  layer_add_child(day_layer, text_layer_get_layer(day_number_layer));
-  layer_add_child(digital_layer, text_layer_get_layer(digital_numbers_layer));
   layer_add_child(root_window_layer, second_hand_layer);
   
   window_stack_push(root_window, true);
   set_tick_update_interval((determine_second_hand_draw()) ? SECOND_UNIT : MINUTE_UNIT);
   struct tm *current_time = get_current_time();
+  infoWindowColor = (persist_exists(windowColorSetting)) ? GColorFromHEX(persist_read_int(windowColorSetting)) : GColorWhite;
+  infoWindowBorderColor = (persist_exists(windowBorderColorSetting)) ? GColorFromHEX(persist_read_int(windowBorderColorSetting)) : GColorDarkGray;
+  infoWindowTextColor = (persist_exists(windowTextColorSetting)) ? GColorFromHEX(persist_read_int(windowTextColorSetting)) : GColorWhite;
+  
   previous_hour = current_time->tm_hour;
 }
 

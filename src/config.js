@@ -1,6 +1,6 @@
 Pebble.addEventListener("ready", function() {
   Pebble.addEventListener("showConfiguration", function() {
-    Pebble.openURL('http://smognus.github.com/variable-hands-config/index.html');
+    Pebble.openURL('http://smognus.github.io/variable-hands-config/index.html');
   });
   
   Pebble.addEventListener('webviewclosed', function(e) {
