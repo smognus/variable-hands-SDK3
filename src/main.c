@@ -11,10 +11,13 @@
 #define windowColorSetting 6
 #define windowBorderColorSetting 7
 #define windowTextColorSetting 8
+#define lightThemeSetting 9
+#define secondHandColorSetting 10
+#define secondOutlineColorSetting 11
 
 #define day_frame GRect(90,73,22,25)
 #define digital_time_frame GRect(40,106,68,24)
-#define battery_rect GRect(48,38,48,3)
+#define battery_rect GRect(55,38,41,3)
 
 static Layer *root_window_layer;  
 static Layer *second_hand_layer;
@@ -40,6 +43,11 @@ static int previous_hour;
 static GColor infoWindowColor;
 static GColor infoWindowBorderColor;
 static GColor infoWindowTextColor;
+
+static GColor hmHandColor;
+static GColor hmOutlineColor;
+static GColor secondHandColor;
+static GColor secondOutlineColor;
 
 static void deinit() {
   layer_destroy(second_hand_layer);
@@ -90,7 +98,7 @@ static void time_change_handler(struct tm *current_time, TimeUnits units_changed
 static void digital_numbers_layer_draw(Layer *layer, GContext *ctx) {
     graphics_context_set_fill_color(ctx, infoWindowColor);
     graphics_context_set_stroke_color(ctx, infoWindowBorderColor);
-    graphics_context_set_stroke_width(ctx, 3);
+    graphics_context_set_stroke_width(ctx, 1);
     graphics_fill_rect(ctx, digital_time_frame, 5, GCornersAll);
     graphics_draw_round_rect(ctx, digital_time_frame, 5);
   
@@ -104,6 +112,7 @@ static void digital_numbers_layer_draw(Layer *layer, GContext *ctx) {
     text_layer_set_text(digital_numbers_layer, string_time);
 }
 static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
+  determine_hand_colors();
   // Get the current time.
   time_t temp = time(NULL); 
   struct tm *current_time = localtime(&temp);
@@ -140,21 +149,22 @@ static void second_hand_layer_draw(Layer *layer, GContext *ctx) {
   second_hand_path = gpath_create(&second_hand_path_points);
   gpath_move_to(second_hand_path, center);
   gpath_rotate_to(second_hand_path, TRIG_MAX_ANGLE / 360 * second_angle);
-  graphics_context_set_fill_color(ctx, GColorRed);
-  graphics_context_set_stroke_color(ctx, GColorDarkCandyAppleRed);
+  graphics_context_set_fill_color(ctx, secondHandColor);
+  graphics_context_set_stroke_color(ctx, secondOutlineColor);
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_filled(ctx, second_hand_path);
   gpath_draw_outline(ctx, second_hand_path);
   hand_highlight_path = gpath_create(&hand_highlight_path_points);
   gpath_move_to(hand_highlight_path, center);
   gpath_rotate_to(hand_highlight_path, TRIG_MAX_ANGLE / 360 * second_angle);
-  graphics_context_set_stroke_color(ctx, GColorRichBrilliantLavender);
+  graphics_context_set_stroke_color(ctx, secondOutlineColor);
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_outline(ctx, hand_highlight_path);  
   gpath_destroy(second_hand_path);
   gpath_destroy(hand_highlight_path);
 }
 static void minute_hand_layer_draw(Layer *layer, GContext *ctx) {
+  determine_hand_colors();
   // Get the current time.
   time_t temp = time(NULL); 
   struct tm *current_time = localtime(&temp);
@@ -193,21 +203,22 @@ static void minute_hand_layer_draw(Layer *layer, GContext *ctx) {
   minute_hand_path = gpath_create(&minute_hand_path_points);
   gpath_move_to(minute_hand_path, center);
   gpath_rotate_to(minute_hand_path, TRIG_MAX_ANGLE / 360 * minute_angle);
-  graphics_context_set_fill_color(ctx, GColorLightGray);
-  graphics_context_set_stroke_color(ctx, GColorDarkGray);
+  graphics_context_set_fill_color(ctx, hmHandColor);
+  graphics_context_set_stroke_color(ctx, hmOutlineColor);
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_filled(ctx, minute_hand_path);
   gpath_draw_outline(ctx, minute_hand_path);
   hand_highlight_path = gpath_create(&hand_highlight_path_points);
   gpath_move_to(hand_highlight_path, center);
   gpath_rotate_to(hand_highlight_path, TRIG_MAX_ANGLE / 360 * minute_angle);
-  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_context_set_stroke_color(ctx, hmOutlineColor);
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_outline(ctx, hand_highlight_path);  
   gpath_destroy(minute_hand_path);
   gpath_destroy(hand_highlight_path);
 }
 static void hour_hand_layer_draw(Layer *layer, GContext *ctx) {
+  determine_hand_colors();
   // Get the current time.
   time_t temp = time(NULL); 
   struct tm *current_time = localtime(&temp);
@@ -252,15 +263,15 @@ static void hour_hand_layer_draw(Layer *layer, GContext *ctx) {
   hour_hand_path = gpath_create(&hour_hand_path_points);
   gpath_move_to(hour_hand_path, center);
   gpath_rotate_to(hour_hand_path, TRIG_MAX_ANGLE / 360 * hour_angle);
-  graphics_context_set_fill_color(ctx, GColorLightGray);
-  graphics_context_set_stroke_color(ctx, GColorDarkGray);
+  graphics_context_set_fill_color(ctx, hmHandColor);
+  graphics_context_set_stroke_color(ctx, hmOutlineColor);
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_filled(ctx, hour_hand_path);
   gpath_draw_outline(ctx, hour_hand_path);
   hand_highlight_path = gpath_create(&hand_highlight_path_points);
   gpath_move_to(hand_highlight_path, center);
   gpath_rotate_to(hand_highlight_path, TRIG_MAX_ANGLE / 360 * hour_angle);
-  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_context_set_stroke_color(ctx, hmOutlineColor);
   graphics_context_set_stroke_width(ctx, 1);
   gpath_draw_outline(ctx, hand_highlight_path);  
   gpath_destroy(hour_hand_path);
@@ -277,9 +288,9 @@ static void day_layer_draw (Layer* layer, GContext* ctx) {
     
     graphics_context_set_fill_color(ctx, infoWindowColor);
     graphics_context_set_stroke_color(ctx, infoWindowBorderColor);
-    graphics_context_set_stroke_width(ctx, 3);
+    graphics_context_set_stroke_width(ctx, 1);
     graphics_fill_rect(ctx, day_frame, 5, GCornersAll);
-    graphics_draw_rect(ctx, day_frame);
+    graphics_draw_round_rect(ctx, day_frame, 5);
     
     text_layer_set_font(day_number_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
     text_layer_set_background_color(day_number_layer, GColorClear);
@@ -347,6 +358,16 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     layer_set_hidden(digital_layer, true);
     layer_set_hidden(text_layer_get_layer(digital_numbers_layer), true);
   }
+  Tuple *light_theme_setting_tuple = dict_find(iterator, lightThemeSetting);
+  if(light_theme_setting_tuple && light_theme_setting_tuple->value->int32 > 0) {
+    persist_write_bool(lightThemeSetting, true);
+    gbitmap_destroy(clockface_bitmap);
+    clockface_bitmap = gbitmap_create_with_resource(RESOURCE_ID_black_marks);
+  } else {
+    persist_write_bool(lightThemeSetting, false);
+    gbitmap_destroy(clockface_bitmap);
+    clockface_bitmap = gbitmap_create_with_resource(RESOURCE_ID_white_marks);
+  }
   Tuple *second_start_tuple = dict_find(iterator, secondStartSetting);
   Tuple *second_end_tuple = dict_find(iterator, secondEndSetting);
   if(second_start_tuple && second_end_tuple) {
@@ -370,6 +391,16 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     infoWindowTextColor = GColorFromHEX(window_text_color_tuple->value->int32);
     persist_write_int(windowTextColorSetting, window_text_color_tuple->value->int32);
   }
+  Tuple *second_hand_color_tuple = dict_find(iterator, secondHandColorSetting);
+  if (window_text_color_tuple) {
+    secondHandColor = GColorFromHEX(second_hand_color_tuple->value->int32);
+    persist_write_int(secondHandColorSetting, second_hand_color_tuple->value->int32);
+  }
+  Tuple *second_outline_color_tuple = dict_find(iterator, secondOutlineColorSetting);
+  if (window_text_color_tuple) {
+    secondOutlineColor = GColorFromHEX(second_outline_color_tuple->value->int32);
+    persist_write_int(secondOutlineColorSetting, second_outline_color_tuple->value->int32);
+  }
   determine_second_hand_draw();
   layer_mark_dirty(root_window_layer);
 }
@@ -381,6 +412,12 @@ static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResul
 }
 static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+}
+static void determine_hand_colors() {
+  secondHandColor = (persist_exists(secondHandColorSetting)) ? GColorFromHEX(persist_read_int(secondHandColorSetting)) : GColorRed;
+  secondOutlineColor = (persist_exists(secondOutlineColorSetting)) ? GColorFromHEX(persist_read_int(secondOutlineColorSetting)) : GColorRichBrilliantLavender;
+  hmHandColor = (persist_read_bool(lightThemeSetting)) ? GColorLightGray : GColorLightGray;
+  hmOutlineColor = (persist_read_bool(lightThemeSetting)) ? GColorBlack : GColorWhite;
 }
 static void init() {    
   APP_LOG(APP_LOG_LEVEL_INFO, "init()");
@@ -416,8 +453,8 @@ static void init() {
   battery_status_layer = layer_create(bounds);
   layer_set_update_proc(battery_status_layer, battery_status_draw);
   
-  clockface_bitmap = gbitmap_create_with_resource(RESOURCE_ID_clockface_bitmap);
-  
+  clockface_bitmap = gbitmap_create_with_resource((persist_read_bool(lightThemeSetting)) ? RESOURCE_ID_black_marks : RESOURCE_ID_white_marks);
+    
   background_layer = bitmap_layer_create(bounds);
   layer_set_update_proc(bitmap_layer_get_layer(background_layer), background_layer_draw);
     
@@ -463,6 +500,10 @@ static void init() {
   infoWindowBorderColor = (persist_exists(windowBorderColorSetting)) ? GColorFromHEX(persist_read_int(windowBorderColorSetting)) : GColorDarkGray;
   infoWindowTextColor = (persist_exists(windowTextColorSetting)) ? GColorFromHEX(persist_read_int(windowTextColorSetting)) : GColorWhite;
   
+  secondHandColor = (persist_exists(secondHandColorSetting)) ? GColorFromHEX(persist_read_int(secondHandColorSetting)) : GColorRed;
+  secondOutlineColor = (persist_exists(secondOutlineColorSetting)) ? GColorFromHEX(persist_read_int(secondOutlineColorSetting)) : GColorRichBrilliantLavender;
+  hmHandColor = (persist_read_bool(lightThemeSetting)) ? GColorDarkGray : GColorLightGray;
+  hmOutlineColor = (persist_read_bool(lightThemeSetting)) ? GColorBlack : GColorWhite;
   previous_hour = current_time->tm_hour;
 }
 

@@ -3,7 +3,10 @@
         "batterySetting": 2,
         "daySetting": 1,
         "digitalSetting": 5,
+        "lightThemeSetting": 9,
         "secondEndSetting": 4,
+        "secondHandColorSetting": 10,
+        "secondOutlineColorSetting": 11,
         "secondStartSetting": 3,
         "tickSetting": 0,
         "windowBorderColorSetting": 7,
@@ -18,6 +21,16 @@
     "projectType": "native",
     "resources": {
         "media": [
+            {
+                "file": "images/white_marks.png",
+                "name": "white_marks",
+                "type": "png"
+            },
+            {
+                "file": "images/black_marks.png",
+                "name": "black_marks",
+                "type": "png"
+            },
             {
                 "file": "images/menu_icon.png",
                 "menuIcon": true,
@@ -36,8 +49,8 @@
     "targetPlatforms": [
         "basalt"
     ],
-    "uuid": "E4383FB3-620A-4BCA-8E40-EEF84789CE1C",
-    "versionLabel": "1.6",
+    "uuid": "f3d5b072-6e8d-413f-a036-8c7c875f29ae",
+    "versionLabel": "1.7",
     "watchapp": {
         "watchface": true
     }
